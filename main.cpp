@@ -8,49 +8,38 @@ void add(
         const int n
 )
 {
-    for (int i = 0; i < n; i++)
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+    for (int i = index; i < n; i += stride)
         res[i] = x[i] + y[i];
 }
 
 int main()
 {
     int N = 1 << 20; // 1M elements
+    float *x, *y, *res;
 
-    float* x, *y, *res;
+    cudaMallocManaged(&x, N * sizeof(float));
+    cudaMallocManaged(&y, N * sizeof(float));
+    cudaMallocManaged(&res, N * sizeof(float));
 
-//    auto *x = new float[N];
-//    auto *y = new float[N];
-//    auto *res = new float[N];
-
-    cudaMallocManaged(&x, N*sizeof(float));
-    cudaMallocManaged(&y, N*sizeof(float));
-    cudaMallocManaged(&res, N*sizeof(float));
-    cudaDeviceSynchronize();
-
-// initialize x and y arrays on the host
     for (int i = 0; i < N; i++)
     {
         x[i] = 1.0f;
         y[i] = 2.0f;
     }
 
+    int blockSize = 256;
+    int numBlocks = (N + blockSize - 1) / blockSize;
+    add <<< numBlocks, blockSize >>> (N, x, y);
 
-// Run kernel on 1M elements on the CPU
+    cudaDeviceSynchronize();
 
-    add<<<1, 1>>>(N, x, y);
-//    add(x, y, res, N);
-
-// Check for errors (all values should be 3.0f)
     float maxError = 0.0f;
     for (int i = 0; i < N; i++)
         maxError = fmax(maxError, fabs(res[i] - 3.0f));
     std::cout << "Max error: " << maxError << std::endl;
 
-// Free memory
-//    delete[] x;
-//    delete[] y;
-//    delete[] res;
-//
     cudaFree(x);
     cudaFree(y);
     cudaFree(res);
