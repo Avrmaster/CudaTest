@@ -1,24 +1,22 @@
 #include <iostream>
-using namespace std;
 
 __global__
 void add(
-        float *x,
-        float *y,
-        float *res,
-        int n
+        const float *const x,
+        const float *const y,
+        float *const res,
+        const int n
 )
 {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
-
     for (int i = index; i < n; i += stride)
         res[i] = x[i] + y[i];
 }
 
 int main()
 {
-    int N = 1 << 26; // 1M elements
+    int N = 1 << 20; // 1M elements
     float *x, *y, *res;
 
     cudaMallocManaged(&x, N * sizeof(float));
@@ -33,23 +31,18 @@ int main()
 
     int blockSize = 256;
     int numBlocks = (N + blockSize - 1) / blockSize;
-    add << < numBlocks, blockSize >> > (x, y, res, N);
+    add <<< numBlocks, blockSize >>> (x, y, res, N);
+
     cudaDeviceSynchronize();
 
     float maxError = 0.0f;
     for (int i = 0; i < N; i++)
-    {
         maxError = fmax(maxError, fabs(res[i] - 3.0f));
-    }
     std::cout << "Max error: " << maxError << std::endl;
 
-// Free memory
-//    delete[] x;
-//    delete[] y;
-//    delete[] res;
-//
     cudaFree(x);
     cudaFree(y);
     cudaFree(res);
+
     return 0;
 }
