@@ -14,14 +14,28 @@ void add(
         res[i] = x[i] + y[i];
 }
 
+void add_serial(
+        const float *const x,
+        const float *const y,
+        float *const res,
+        const int n
+)
+{
+    for (int i = 0; i < n; ++i)
+        res[i] = x[i] + y[i];
+}
+
 int main()
 {
-    int N = 1 << 20; // 1M elements
+    int N = 1 << 28; // 1M elements
     float *x, *y, *res;
 
     cudaMallocManaged(&x, N * sizeof(float));
     cudaMallocManaged(&y, N * sizeof(float));
     cudaMallocManaged(&res, N * sizeof(float));
+//    x = new float[N];
+//    y = new float[N];
+//    res = new float[N];
 
     for (int i = 0; i < N; i++)
     {
@@ -32,9 +46,10 @@ int main()
     int blockSize = 256;
     int numBlocks = (N + blockSize - 1) / blockSize;
     add <<< numBlocks, blockSize >>> (x, y, res, N);
-
     cudaDeviceSynchronize();
+//    add_serial(x, y, res, N);
 
+    std::cout << "Calc error...";
     float maxError = 0.0f;
     for (int i = 0; i < N; i++)
         maxError = fmax(maxError, fabs(res[i] - 3.0f));
@@ -43,6 +58,9 @@ int main()
     cudaFree(x);
     cudaFree(y);
     cudaFree(res);
+//    delete[] x;
+//    delete[] y;
+//    delete[] res;
 
     return 0;
 }
